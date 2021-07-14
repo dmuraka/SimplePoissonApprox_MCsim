@@ -4,6 +4,7 @@
 ########## "Case 1: Basic over-dispersed Poisson regression model" section
 ########## in Murakami and Matsui (2021) Improved log-Gaussian approximation for
 ########## over-dispersed Poisson regression: application to spatial analysis of COVID-19
+########## (Note: Proposed approximation is implemented in lines 74-77)
 ######################################################################
 
 ########## Function for generating samples from a distribution such that
