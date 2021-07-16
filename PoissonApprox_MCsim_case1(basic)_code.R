@@ -11,7 +11,7 @@
 # dpar: Dispersion parameter
 # n   : Sample size
 
-dgp   <-function( b, dpar, n ){
+dgpFun   <-function( b, dpar, n ){
 
   rqpois <- function(n, mu, dpar) {
     rnbinom(n = n, mu = mu, size = mu/(dpar-1))
@@ -62,7 +62,7 @@ for(n in c(50, 200)){############## Sample size
       while(test_error){
 
         ###################### Data generation
-        dgp     <- dgp( b = b, dpar = dpar, n = n)
+        dgp     <- dgpFun( b = b, dpar = dpar, n = n)
         x       <- dgp$x
         y       <- dgp$y
 
