@@ -1,0 +1,52 @@
+###################################################################################################
+######### Pseudo-code used in the spatial analysis of COVID-19 in Murakami and Matsui (2021) ######
+###################################################################################################
+
+########## Input ######################
+### dd  : which is a data.frame including 
+# - y   : number of cases by day by prefecture
+# - pop : population by prefecture
+# - walk: prefectural pedestrian density by day
+# - week: ID for the weeks
+# - day7: ID for the days of the week
+# - age : ID for the age groups
+# - pref: ID for the prefectures
+# - px  : Longitude
+# - py  : Latitude
+
+######## Main ##########################
+zrat      <- sum(dd$y==0)/length(dd$y)
+dd$yy     <- log((dd$y+0.5)/dd$pop) - (1+0.5*zrat)/(dd$y+0.5)
+dd$weight <- dd$y + 0.5
+mod       <- gam(yy ~ walk +s(week,bs="re")+s(day7,bs="re")
+                        +s(age,bs="re")+s(pref,bs="re")+s(px,py),weight =weight,data=dd)
+
+sig1      <- mod$sig2
+nb        <- length(summary(mod)$p.coeff)
+Xs        <- predict(mod,type="lpmatrix")
+lpred1    <- Xs%*%coef(mod) + log(dd$pop)
+pred1     <- exp(lpred1)
+wXs       <- c(sqrt(pred1))*Xs
+wy        <- c(sqrt(pred1))*(Xs%*%coef(mod) + (dd$y - pred1)/pred1)
+
+S_mat1    <-list(NULL)
+S_mat1[[1]]<-matrix(0,nb,nb)
+for(iii in 1:length(mod$sp)){
+  S_mat1[[iii+1]]<-mod$sp[iii]*mod$smooth[[iii]]$S[[1]]
+}
+V1       <- bdiag(S_mat1)
+beta1    <- solve(t(wXs)%*%wXs+V1) %*% t(wXs)%*%wy # Coefficeint estimates 
+bse1     <- sqrt(sig1*diag(solve(t(wXs)%*%wXs+V1)))# Coefficient standard errors
+pred1    <- as.vector(dd$pop*exp( Xs %*% beta1 ))  # Predicted number of cases
+
+b1_week  <-beta1[grep("week",names(coefficients(mod)))]# Group effects (week)
+b1_day7  <-beta1[grep("day7",names(coefficients(mod)))]# Group effects (days of the week)
+b1_age   <-beta1[grep("age",names(coefficients(mod)))] # Group effects (age/generation)
+
+pxpy_id  <- grep("px,py",names(coefficients(mod)))
+ppref_id <- grep("pref",names(coefficients(mod)))
+b1_sp    <- Xs[,pxpy_id] %*% beta1[pxpy_id]
+b1_pref  <- Xs[,ppref_id] %*% beta1[ppref_id]
+b1_prefs <- unique(data.frame(pname=dd$pref, b1_sp, b1_pref))# Spatially dependent effects (b1_sp) and group effects by prefecture (b1_pref)
+
+
